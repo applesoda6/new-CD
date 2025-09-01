@@ -1,83 +1,105 @@
-#ifndef  __CD_H
-#define  __CD_H
-#include "stm32f10x.h"                  // Device header
-#include "cmsis_os.h"                   // ARM::CMSIS:RTOS:Keil RTX
-#include "Power.h"
-#include "OLED.h"
+#ifndef __CD_H__
+#define __CD_H__
 
-//å¤–éƒ¨å˜é‡å£°æ˜
-extern osPoolId PowerPool;
-extern osMessageQId PowerMessages; 
-extern osMailQId Mail;
-extern osTimerId Timer;
+#include "cmsis_os.h"
+#include "stdint.h"
 
-/* CDçº¿ç¨‹åˆ›å»ºå‡½æ•° */
-void CD_Thread (void const *argument);
-/* CDçº¿ç¨‹åˆå§‹åŒ–å‡½æ•° */
-void CD_ThreadInit(void);
-/* å®šæ—¶å™¨å›è°ƒå‡½æ•° */
-void Timer_Callback  (void const *arg);
-
-/* ä¿å­˜å’Œæ¢å¤å‡½æ•° */
-void SaveState(void);
-void RestoreState(void);
-
-/* CDå‘Powerå›å¤å¼€å…³æœºå‡½æ•° */
-void CD_Respond_ON(void);
-void CD_Respond_OFF(void);
-/* CDå‘OLEDå‘é€CDçŠ¶æ€å‡½æ•° */
-void CD_Send_Load(void);
-void CD_Send_Eject(void);
-void CD_Send_Play(void);
-void CD_Send_Pause(void);
-void CD_Send_Stop(void);
-void CD_Send_NoDisc(void);
-void CD_Send_FastPreviousing(void);
-void CD_Send_FastNexting(void);
-void CD_Send_Previous(void);
-void CD_Send_Next(void);
-
-/* CD æ”¶åˆ°çš„æ¶ˆæ¯ */
-typedef  enum
-    {
-    CD_Power_ON = 0x10, //å¼€æœº
-    CD_Power_OFF = 0x12, // å…³æœº
-    CD_Load_Eject = 0x01, //åŠ è½½å’Œå¼¹å‡º
-    CD_Play_Pause = 0x02, //æ’­æ”¾å’Œæš‚åœ
-    CD_Previous = 0x03, //ä¸Šä¸€æ›²
-    CD_Next = 0x04, //ä¸‹ä¸€æ›²
-    CD_Wait_3s = 0x05, //ç­‰å¾…3s
-}CD_Msg;   //CD æ”¶åˆ°æ¶ˆæ¯çš„æšä¸¾ç±»å‹
-
-
+/* =========================
+ * Í³Ò»ÏûÏ¢Ìå£¨¿çÄ£¿éÎ¨Ò»¸ñÊ½£©
+ * ========================= */
 typedef struct
-    {
-    CD_Msg CD_Res;
-}CD_Msg_Type;
+{
+    uint8_t  eventID;          /* ÊÂ¼şID£¨½ÓÊÕ·½¶¨ÒåµÄÊÂ¼ş£© */
+    uint32_t scourceID;        /* ·¢ËÍ·½Ä£¿éID£¨°´Ô­Æ´Ğ´£©   */
+    uint32_t targetID;         /* ½ÓÊÕ·½Ä£¿éID               */
+    uint32_t option[3];        /* À©Õ¹×Ö¶Î£¨²ÎÊı/ÉÏÏÂÎÄ£©    */
+} MsgMail_t;
 
+/* =========================
+ * Ä£¿éID£¨À´Ô´/Ä¿±ê£©
+ * ========================= */
+enum
+{
+    MOD_POWER = 0x01,
+    MOD_KEY = 0x02,
+    MOD_CD = 0x03,
+    MOD_OLED = 0x04
+};
 
+/* =========================
+ * CD Ö÷×´Ì¬
+ * ========================= */
+typedef enum
+{
+    ST_POWER_OFF = 0,
+    ST_NODISC,
+    ST_LOAD,
+    ST_EJECT,
+    ST_STOP,
+    ST_PLAY,
+    ST_PAUSE,
+    ST_PREV,
+    ST_NEXT,
+    ST_MAX
+} CD_Mode_t;
 
-typedef enum {
-	NoDisc, //æ— CD
-	Disc,  //æœ‰CD 
-	Load,  //åŠ è½½
-	Eject, //å¼¹å‡º
-	Stop, //åœæ­¢
-	Play, //æ’­æ”¾
-	Pause,//æš‚åœ
-	Previous, //ä¸Šä¸€æ›²
-	Next //ä¸‹ä¸€æ›²
+/* =========================
+ * CD ÄÚ²¿ÊÂ¼ş£¨½ö CD ×Ô¼ºÏû·Ñ£©
+ * £¨Ó³Éä×Ô¡°Íâ²¿À´µÄ¡± EVT_*£©
+ * ========================= */
+typedef enum
+{
+    EV_CD_POWER_ON = 0,
+    EV_CD_POWER_OFF,
+    EV_CD_LOAD_EJECT,
+    EV_CD_WAIT_3S,
+    EV_CD_PLAY_PAUSE,
+    EV_CD_PREVIOUS,
+    EV_CD_NEXT,
+    EV_CD_TURN_0_5S,
+    EV_CD_TURN_UP,
+    EV_MAX
+} CD_Event_t;
 
-}CD_State;//CDæœºçŠ¶æ€çš„æšä¸¾ç±»å‹
+/* =========================
+ * ¡°Ë­½ÓÊÕË­¶¨Òå¡±¡ª¡ªCD ½ÓÊÕµÄÍâ²¿ÊÂ¼ş
+ * ÕâĞ©ºêÊÇ¡°±ğÈË·¢¸ø CD¡±µÄÊÂ¼şºÅ
+ * ========================= */
+#define EVT_PWR_ON                 0x10  /* Power ON ÇëÇó   ¡ú CD */
+#define EVT_PWR_OFF                0x11  /* Power OFF ÇëÇó  ¡ú CD */
 
-typedef struct {
-    CD_State Current;//å½“å‰çŠ¶æ€
-    CD_Msg Msg;  //æ¥æ”¶åˆ°çš„æ¶ˆæ¯
-    CD_State Next; //ä¸‹ä¸€çŠ¶æ€
-    void (*fun)(); //æ‰§è¡Œå‡½æ•°
-} State_Transition; //çŠ¶æ€è¿ç§»
+#define EVT_KEY_LOAD_EJECT         0x00  /* KEY0¶Ì°´£ºLoad/Eject ¡ú CD */
+#define EVT_KEY_PREV_START         0x01  /* KEY?³¤°´¿ªÊ¼ Prev   ¡ú CD */
+#define EVT_KEY_PREV_STOP          0x02  /* KEY?³¤°´½áÊø Prev   ¡ú CD */
+#define EVT_KEY_PLAY_PAUSE         0x03  /* KEY?¶Ì°´ Play/Pause ¡ú CD */
+#define EVT_KEY_NEXT_START         0x04  /* KEY?³¤°´¿ªÊ¼ Next   ¡ú CD */
+#define EVT_KEY_NEXT_STOP          0x05  /* KEY?³¤°´½áÊø Next   ¡ú CD */
 
+ /* CD ÄÚ²¿×ÔÍ¶µİ£¨ÓÉ CD ×Ô¼º·¢¸ø×Ô¼º£© */
+#define EVT_INT_WAIT_3S_TIMEOUT    0x40
+#define EVT_INT_FAST_TICK_500MS    0x41
 
-void CdStateChange(CD_Msg m);
-int CheckTransition(CD_State s, CD_Msg m);
+/* =========================
+ * ¶ÔÍâÓÊÏä¾ä±ú£¨ÓÉ¸÷Ä£¿é .c ´´½¨£©
+ * ========================= */
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+    extern osMailQId g_mailq_power;  /* POWER ½ÓÊÕÓÊÏä£¨POWER.c ´´½¨£© */
+    extern osMailQId g_mailq_oled;   /* OLED  ½ÓÊÕÓÊÏä£¨OLED.c  ´´½¨£© */
+    extern osMailQId g_mailq_cd;     /* CD    ½ÓÊÕÓÊÏä£¨CD.c    ´´½¨£© */
+
+    /* =========================
+     * CD ¶ÔÍâ API
+     * ========================= */
+    void      CD_Init(void);
+    void      CD_PostMessage(MsgMail_t* msg);
+    CD_Mode_t CD_GetState(void);
+    uint16_t  CD_GetTrackNo(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __CD_H__ */
